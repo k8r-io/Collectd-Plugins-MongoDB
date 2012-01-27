@@ -1,0 +1,1 @@
+opcounters 	insert:GAUGE:0:U, query:GAUGE:0:U, update:GAUGE:0:U, delete:GAUGE:0:U, getmore:GAUGE:0:U, command:GAUGE:0:U
