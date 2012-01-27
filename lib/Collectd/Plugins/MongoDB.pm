@@ -7,11 +7,35 @@ use Collectd qw( :all );
 use MongoDB;
 
 my $connection;
+my $connection_attempt_freq=6;
+my $connection_passes=0;
 sub mongo_init {
-	$connection = MongoDB::Connection->new(host => $hostname_g.':27017', auto_connect=>1,auto_reconnect=>1) or plugin_log(ERROR,"Failed connecting to MongoDB and stuff!");
+	$connection = eval{MongoDB::Connection->new(host => $hostname_g.':27017', auto_connect=>1,auto_reconnect=>1)}
+	if(!$connection) {
+		plugin_log(ERROR,"Connection to MongoDB has failed.");
+	}
 }
 sub mongo_read {
-	my $db = $connection->get_database("admin");
+	if(!$connection and $connection_passes>=$connection_attempt_freq) {
+		$connection_passes=0;
+		$connection = eval{MongoDB::Connection->new(host => $hostname_g.':27017', auto_connect=>1,auto_reconnect=>1)}
+		if(!$connection) {
+			plugin_log(ERROR,"Connection to MongoDB has failed.");
+			return;
+		}
+	}
+	elsif(!$connection) {
+		plugin_log(INFO,"Database connection had failed, waiting to retry.");
+		$connection_passes++;
+		return;
+	}
+
+	my $db = eval{$connection->get_database("admin")};
+	if(!$db) { #if the get database failed, it's probably because of a dead connection, so ditch the connection and skip the rest of the check
+		plugin_log(ERROR,"MongoDB database selection has failed.");
+		$connection=0;
+		return;
+	}
 	my $status= $db->run_command({'serverStatus' => 1});
 	my %v = ( 'host'=>$hostname_g, 'interval'=>$interval_g , 'time'=>time(), 'plugin'=>'mongodb');
 
