@@ -7,36 +7,29 @@ use Collectd qw( :all );
 use MongoDB;
 
 my $connection;
-my $connection_attempt_freq=6;
-my $connection_passes=0;
 sub mongo_init {
-	$connection = eval{MongoDB::Connection->new(host => $hostname_g.':27017', auto_connect=>1,auto_reconnect=>1)}
+	$connection = eval{MongoDB::Connection->new(host => $hostname_g.':27017', auto_connect=>1,auto_reconnect=>1)};
 	if(!$connection) {
-		plugin_log(ERROR,"Connection to MongoDB has failed.");
+		plugin_log(ERROR,"Connection to MongoDB has failed. Will retry later before attempting to read metrics.");
 	}
+	return 1;
 }
 sub mongo_read {
-	if(!$connection and $connection_passes>=$connection_attempt_freq) {
-		$connection_passes=0;
-		$connection = eval{MongoDB::Connection->new(host => $hostname_g.':27017', auto_connect=>1,auto_reconnect=>1)}
+	if(!$connection) {
+		$connection = eval{MongoDB::Connection->new(host => $hostname_g.':27017', auto_connect=>1,auto_reconnect=>1)};
 		if(!$connection) {
-			plugin_log(ERROR,"Connection to MongoDB has failed.");
-			return;
+			plugin_log(ERROR,"Connection to MongoDB has failed. Will retry later before attempting to read metrics.");
+			return 0;
 		}
 	}
-	elsif(!$connection) {
-		plugin_log(INFO,"Database connection had failed, waiting to retry.");
-		$connection_passes++;
-		return;
-	}
 
-	my $db = eval{$connection->get_database("admin")};
-	if(!$db) { #if the get database failed, it's probably because of a dead connection, so ditch the connection and skip the rest of the check
-		plugin_log(ERROR,"MongoDB database selection has failed.");
+	my $db = $connection->get_database("admin");
+	my $status= eval{$db->run_command({'serverStatus' => 1})};
+	if(!$status) { #if the get database failed, it's probably because of a dead connection, so ditch the connection and skip the rest of the check
+		plugin_log(ERROR,"MongoDB query has failed. Will try to reconnect again later.");
 		$connection=0;
-		return;
+		return 0;
 	}
-	my $status= $db->run_command({'serverStatus' => 1});
 	my %v = ( 'host'=>$hostname_g, 'interval'=>$interval_g , 'time'=>time(), 'plugin'=>'mongodb');
 
 	$v{'type'}='opcounters';
@@ -107,7 +100,7 @@ sub mongo_read {
 	$v{'values'}[3]=$status->{'indexCounters'}->{'btree'}->{'resets'};
 	plugin_dispatch_values(\%v);
 	
-
+	return 1;
 }
 
 plugin_register(TYPE_READ, 'MongoDB', 'mongo_read');

@@ -1,0 +1,27 @@
+===Dependencies===
+* Collectd perl plugin and the perl module
+* MongoDB perl driver ('MongoDB' in CPAN, http://search.cpan.org/dist/MongoDB/)
+
+Notes:
+
+Make sure the perl plugin is installed and working, you may need to load the plugin with the "Globals true" option if you are using versions 4.9 or 4.10 (http://collectd.org/wiki/index.php/Plugin:Perl#Globals). If you are using CentOS and you see warnings show up in your logs like this:
+Jan 31 12:48:51 web1 collectd[25560]: plugin_load_file: The global flag is not supported, libtool 2 is required for this.
+
+Then you will need to instead modify the start up script you are using to include a line like this:
+export LD_PRELOAD=/usr/lib64/perl5/5.8.8/x86_64-linux-thread-multi/CORE/libperl.so
+Modifying the directory if need be, so it points to the location of libperl.so on your machine.
+
+
+===Configuration===
+Part of installing this plugin is including a new data set type database, make sure you also modify your configuration file to include the default type database (if you only include the mongodb one, it will supercede the default one).
+
+
+LoadPlugin "perl"
+
+TypesDB     "/opt/collectd/etc/mongodb-types.db"
+<Plugin perl>
+        IncludeDir "/opt/collectd/lib"
+        BaseName "Collectd::Plugins"
+        LoadPlugin MongoDB
+</Plugin>
+
