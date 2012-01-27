@@ -1,1 +1,7 @@
 opcounters 	insert:GAUGE:0:U, query:GAUGE:0:U, update:GAUGE:0:U, delete:GAUGE:0:U, getmore:GAUGE:0:U, command:GAUGE:0:U
+globalLock	totalTime:GAUGE:0:U lockTime:GAUGE:0:U
+lockQueue	total:GAUGE:0:U readers:GAUGE:0:U writers:GAUGE:0:U 
+mongo_memory	resident:GAUGE:0:U virtual:GAUGE:0:U mapped:GAUGE:0:U mappedWithJournal:GAUGE:0:U
+backgroundFlushing	flushes:GAUGE:0:U total_ms:GAUGE:0:U last_ms:GAUGE:0:U average_ms:GAUGE:0:U
+network		bytesIn:GAUGE:0:U bytesOut:GAUGE:0:U numRequests:GAUGE:0:U
+indexCounters	accesses:GAUGE:0:U hits:GAUGE:0:U misses:GAUGE:0:U resets:GAUGE:0:U
